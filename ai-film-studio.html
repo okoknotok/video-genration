@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎬 AI Film Studio</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;background:linear-gradient(135deg,#0f0c29 0%,#302b63 50%,#24243e 100%);min-height:100vh;color:#e0e0e0}
+.container{max-width:1100px;margin:0 auto;padding:20px}
+header{text-align:center;padding:30px 0 20px}
+header h1{font-size:2.2em;background:linear-gradient(90deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+header p{color:#aaa;font-size:1em}
+
+/* API Key */
+.api-bar{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 20px;margin-bottom:20px;display:flex;align-items:center;gap:12px}
+.api-bar label{white-space:nowrap;font-size:0.9em;color:#aaa}
+.api-bar input{flex:1;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 12px;color:#e0e0e0;font-size:0.9em}
+.api-bar .save-btn{background:#667eea;border:none;color:white;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:0.85em}
+.api-bar .status{font-size:0.8em}
+.api-bar .status.ok{color:#28a745}
+.api-bar .status.fail{color:#dc3545}
+
+/* Mode */
+.mode-selector{display:flex;gap:16px;justify-content:center;margin:20px 0;flex-wrap:wrap}
+.mode-card{background:rgba(255,255,255,0.05);border:2px solid rgba(255,255,255,0.1);border-radius:16px;padding:22px 30px;cursor:pointer;transition:all 0.3s;text-align:center;min-width:220px;flex:1}
+.mode-card:hover{border-color:#667eea;transform:translateY(-2px)}
+.mode-card.active{border-color:#667eea;background:rgba(102,126,234,0.15);box-shadow:0 0 30px rgba(102,126,234,0.2)}
+.mode-card .icon{font-size:2.5em;margin-bottom:8px}
+.mode-card h3{font-size:1.2em;margin-bottom:6px}
+.mode-card p{color:#888;font-size:0.85em;line-height:1.4}
+
+/* Panel */
+.main-panel{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:25px;margin-top:16px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;margin-bottom:6px;font-weight:600;color:#ccc;font-size:0.95em}
+.form-group textarea{width:100%;min-height:100px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:14px;color:#e0e0e0;font-size:1em;resize:vertical;font-family:inherit}
+.form-group textarea:focus{outline:none;border-color:#667eea}
+.form-group select,.form-group input[type=number]{width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:10px 14px;color:#e0e0e0;font-size:0.95em}
+.form-group select:focus,.form-group input:focus{outline:none;border-color:#667eea}
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+
+.btn-generate{width:100%;padding:16px;background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:12px;color:white;font-size:1.15em;font-weight:700;cursor:pointer;transition:all 0.3s;margin-top:8px}
+.btn-generate:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(102,126,234,0.4)}
+.btn-generate:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* Progress */
+.progress-section{display:none;margin-top:24px}
+.progress-section.active{display:block}
+.progress-bar-bg{background:rgba(0,0,0,0.3);border-radius:10px;overflow:hidden;height:8px;margin-bottom:12px}
+.progress-bar{height:100%;background:linear-gradient(90deg,#667eea,#764ba2);width:0%;transition:width 0.5s}
+.progress-text{text-align:center;color:#aaa;margin-bottom:12px;font-size:0.95em}
+.phase-label{text-align:center;color:#667eea;font-weight:600;margin-bottom:8px}
+.log-container{background:rgba(0,0,0,0.4);border-radius:12px;padding:14px;max-height:280px;overflow-y:auto;font-family:'Courier New',monospace;font-size:0.82em}
+.log-line{padding:2px 0;color:#8f8}
+.log-line.error{color:#f88}
+.log-line.phase{color:#6af;font-weight:700}
+
+/* Result */
+.result-section{display:none;margin-top:24px;text-align:center}
+.result-section.active{display:block}
+.result-section h2{margin-bottom:12px;color:#28a745}
+.result-section video{max-width:100%;max-height:480px;border-radius:12px;margin:12px 0;background:#000}
+.btn-download{display:inline-block;padding:10px 25px;background:#28a745;color:white;text-decoration:none;border-radius:10px;font-weight:600;transition:all 0.3s;margin:6px}
+.btn-download:hover{background:#218838}
+.btn-new{display:inline-block;padding:10px 25px;background:#667eea;color:white;border:none;border-radius:10px;font-weight:600;cursor:pointer;transition:all 0.3s;margin:6px;font-size:1em}
+
+/* History */
+.history-section{margin-top:30px}
+.history-section h2{margin-bottom:12px;color:#ccc;font-size:1.1em}
+.job-list{display:grid;gap:8px}
+.job-item{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:all 0.2s}
+.job-item:hover{border-color:#667eea}
+.job-item .info{flex:1;overflow:hidden}
+.job-item .prompt-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;font-size:0.9em}
+.job-item .meta{font-size:0.75em;color:#888;margin-top:3px}
+.badge{font-size:0.75em;padding:3px 8px;border-radius:5px;margin-right:8px;font-weight:600}
+.badge.shorts{background:#e74c3c;color:white}
+.badge.cinematic{background:#3498db;color:white}
+.badge.done{background:rgba(40,167,69,0.2);color:#28a745}
+.badge.running{background:rgba(255,193,7,0.2);color:#ffc107}
+.badge.error{background:rgba(220,53,69,0.2);color:#dc3545}
+
+/* Cost Estimator */
+.cost-est{background:rgba(102,126,234,0.1);border:1px solid rgba(102,126,234,0.2);border-radius:10px;padding:12px 16px;margin-top:10px;font-size:0.85em;color:#aab}
+.cost-est strong{color:#667eea}
+
+/* Preset prompts */
+.preset-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.preset-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:6px 12px;color:#bbb;font-size:0.8em;cursor:pointer;transition:all 0.2s}
+.preset-btn:hover{background:rgba(102,126,234,0.2);border-color:#667eea;color:white}
+
+@media(max-width:768px){
+.mode-selector{flex-direction:column}
+.mode-card{min-width:auto}
+header h1{font-size:1.6em}
+.settings-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>🎬 AI Film Studio</h1>
+<p>從劇本到成片 — AI 全自動影片生成</p>
+</header>
+
+<!-- API Key -->
+<div class="api-bar">
+<label>🔑 FAL Key:</label>
+<input type="password" id="falKey" placeholder="輸入你的 fal.ai API Key">
+<button class="save-btn" onclick="saveKey()">儲存</button>
+<span class="status" id="keyStatus"></span>
+</div>
+
+<!-- Mode -->
+<div class="mode-selector">
+<div class="mode-card active" data-mode="shorts" onclick="selectMode('shorts')">
+<div class="icon">⚡</div>
+<h3>Shorts 短片</h3>
+<p>60秒直向 9:16<br>YouTube Shorts / Reels / TikTok<br>快速出片，零 LoRA 成本</p>
+</div>
+<div class="mode-card" data-mode="cinematic" onclick="selectMode('cinematic')">
+<div class="icon">🎬</div>
+<h3>Cinematic 長片</h3>
+<p>完整 pipeline 16:9<br>LoRA 角色一致性<br>韓漫風格高質量長片</p>
+</div>
+</div>
+
+<!-- Main -->
+<div class="main-panel">
+<div class="form-group">
+<label>📝 故事大綱 / 主題</label>
+<div class="preset-bar" id="presetBar"></div>
+<textarea id="prompt" placeholder="例：一個男人在深夜便利店遇到神秘女子，她遞給他一張紙條後消失...&#10;&#10;或者：3個令人震驚嘅心理學實驗，你唔信都得"></textarea>
+</div>
+
+<div class="settings-grid">
+<div class="form-group">
+<label>🎨 風格</label>
+<select id="style"></select>
+</div>
+<div class="form-group">
+<label>🎬 動畫模型</label>
+<select id="model"></select>
+</div>
+<div class="form-group">
+<label>🎙️ 語音</label>
+<select id="voice"></select>
+</div>
+<div class="form-group">
+<label>📊 場景數</label>
+<input type="number" id="scenes" value="6" min="3" max="30">
+</div>
+<div class="form-group">
+<label>🎭 語氣</label>
+<select id="tone">
+<option value="懸疑緊張">懸疑緊張</option>
+<option value="爽快霸道">爽快霸道</option>
+<option value="溫馨感人">溫馨感人</option>
+<option value="搞笑輕鬆">搞笑輕鬆</option>
+<option value="恐怖驚悚">恐怖驚悚</option>
+<option value="勵志熱血">勵志熱血</option>
+<option value="浪漫愛情">浪漫愛情</option>
+</select>
+</div>
+<div class="form-group">
+<label>🎞️ 動畫範圍</label>
+<select id="animateScope">
+<option value="ai">AI 智能選擇（推薦）</option>
+<option value="all">全部場景動</option>
+<option value="none">全部靜態（最平）</option>
+</select>
+</div>
+</div>
+
+<div class="cost-est" id="costEst"></div>
+
+<button class="btn-generate" onclick="generate()" id="btnGen">🚀 開始生成</button>
+</div>
+
+<!-- Progress -->
+<div class="progress-section" id="progressSection">
+<div class="phase-label" id="phaseLabel">準備中...</div>
+<div class="progress-text" id="progressText">0%</div>
+<div class="progress-bar-bg"><div class="progress-bar" id="progressBar"></div></div>
+<div class="log-container" id="logContainer"></div>
+</div>
+
+<!-- Result -->
+<div class="result-section" id="resultSection">
+<h2>🎉 生成完成！</h2>
+<video id="resultVideo" controls></video>
+<br>
+<a class="btn-download" id="downloadLink" download>⬇️ 下載影片</a>
+<button class="btn-new" onclick="resetUI()">🔄 再整一條</button>
+</div>
+
+<!-- History -->
+<div class="history-section">
+<h2>📜 歷史紀錄</h2>
+<div class="job-list" id="jobList"><p style="color:#666;font-size:0.9em">暫無紀錄</p></div>
+</div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+let currentMode = 'shorts';
+let isRunning = false;
+
+const MODES = {
+    shorts: {
+        styles: {
+            realistic: '真人寫實',
+            cinematic: '電影質感',
+            dark_moody: '暗黑懸疑',
+            bright_vibrant: '明亮活力',
+            vintage: '復古懷舊',
+        },
+        models: {
+            'ken-burns': {label:'Ken Burns（靜態）', cost:0, speed:'即時', falId:null},
+            'ltx': {label:'LTX Video', cost:0.02, speed:'快', falId:'fal-ai/ltx-video/image-to-video'},
+            'minimax': {label:'MiniMax Live', cost:0.30, speed:'中', falId:'fal-ai/minimax/video-01-live/image-to-video'},
+            'kling': {label:'Kling', cost:0.50, speed:'慢', falId:'fal-ai/kling-video/v1/standard/image-to-video'},
+        },
+        aspect: '9:16', imgW: 768, imgH: 1344, outW: 1080, outH: 1920,
+    },
+    cinematic: {
+        styles: {
+            manhwa: '韓漫風格',
+            cinematic: '電影寫實',
+            anime: '日式動畫',
+            cdrama: '中國古風',
+        },
+        models: {
+            'ken-burns': {label:'Ken Burns（靜態）', cost:0, speed:'即時', falId:null},
+            'ltx': {label:'LTX Video', cost:0.02, speed:'快', falId:'fal-ai/ltx-video/image-to-video'},
+            'minimax': {label:'MiniMax Live', cost:0.30, speed:'中', falId:'fal-ai/minimax/video-01-live/image-to-video'},
+            'kling': {label:'Kling', cost:0.50, speed:'慢', falId:'fal-ai/kling-video/v1/standard/image-to-video'},
+        },
+        aspect: '16:9', imgW: 1344, imgH: 768, outW: 1920, outH: 1080,
+    },
+};
+
+const STYLE_PROMPTS = {
+    realistic: 'photorealistic, hyperrealistic, professional photography, 8K, sharp focus',
+    cinematic: 'cinematic photo, dramatic lighting, film grain, movie still, 8K',
+    dark_moody: 'dark moody atmosphere, low key lighting, shadows, mysterious, cinematic horror',
+    bright_vibrant: 'bright vibrant colors, sunny, energetic, vivid',
+    vintage: 'vintage retro style, warm tones, film photography, nostalgic',
+    manhwa: 'korean manhwa style, webtoon, clean lineart, soft cel shading, detailed face',
+    anime: 'japanese anime style, vibrant colors, detailed',
+    cdrama: 'chinese ancient style, guofeng, elegant, hanfu',
+};
+
+const VOICES = {
+    f1: {id:'female-shaonv', label:'少女音（女）'},
+    f2: {id:'female-tianmei', label:'甜美音（女）'},
+    m1: {id:'male-qn-qingse', label:'青澀青年（男）'},
+    m2: {id:'presenter_male', label:'旁白男聲'},
+    m3: {id:'male-qn-jingying', label:'磁性男聲'},
+};
+
+const PRESETS = {
+    shorts: [
+        '😱 3個都市傳說你聽過未？',
+        '🧠 心理學家發現人嘅3個弱點',
+        '💰 窮人同富人嘅分別',
+        '🔮 你嘅生日揭示你嘅命運',
+        '👻 深夜搭的士遇到嘢...',
+    ],
+    cinematic: [
+        '🗡️ 被背叛嘅殺手重生復仇',
+        '💔 她死後他才明白真相',
+        '👑 乞丐原來係國王嘅兒子',
+        '🐉 異世界覺醒最弱技能',
+        '🌃 Cyberpunk 黑客追殺',
+    ],
+};
+
+// ============================================================
+// FAL AI CLIENT (direct browser API)
+// ============================================================
+async function falSubmit(model, args) {
+    const key = getKey();
+    const res = await fetch(`https://queue.fal.run/${model}`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Key ${key}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(args),
+    });
+    if (!res.ok) throw new Error(`fal API error: ${res.status} ${await res.text()}`);
+    return await res.json();
+}
+
+async function falResult(requestId, model) {
+    const key = getKey();
+    // Poll for completion
+    for (let i = 0; i < 300; i++) {
+        const res = await fetch(`https://queue.fal.run/${model}/requests/${requestId}/status`, {
+            headers: {'Authorization': `Key ${key}`},
+        });
+        const status = await res.json();
+        if (status.status === 'COMPLETED') {
+            const resultRes = await fetch(`https://queue.fal.run/${model}/requests/${requestId}`, {
+                headers: {'Authorization': `Key ${key}`},
+            });
+            return await resultRes.json();
+        }
+        if (status.status === 'FAILED') throw new Error('fal job failed: ' + JSON.stringify(status));
+        await sleep(2000);
+    }
+    throw new Error('fal job timeout');
+}
+
+async function falRun(model, args) {
+    const submitted = await falSubmit(model, args);
+    if (submitted.request_id) {
+        return await falResult(submitted.request_id, model);
+    }
+    // Direct result (no queue)
+    return submitted;
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function getKey() {
+    return localStorage.getItem('fal_key') || '';
+}
+
+function saveKey() {
+    const key = document.getElementById('falKey').value.trim();
+    localStorage.setItem('fal_key', key);
+    const status = document.getElementById('keyStatus');
+    if (key) {
+        status.textContent = '✅ 已儲存';
+        status.className = 'status ok';
+    } else {
+        status.textContent = '❌ 請輸入 key';
+        status.className = 'status fail';
+    }
+    updateCost();
+}
+
+function log(msg, type='') {
+    const c = document.getElementById('logContainer');
+    const d = document.createElement('div');
+    d.className = 'log-line ' + type;
+    d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    c.appendChild(d);
+    c.scrollTop = c.scrollHeight;
+}
+
+function setProgress(pct, phase='') {
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressText').textContent = pct + '%';
+    if (phase) document.getElementById('phaseLabel').textContent = phase;
+}
+
+function getJobs() {
+    return JSON.parse(localStorage.getItem('film_jobs') || '[]');
+}
+
+function saveJob(job) {
+    const jobs = getJobs();
+    const idx = jobs.findIndex(j => j.id === job.id);
+    if (idx >= 0) jobs[idx] = job; else jobs.unshift(job);
+    localStorage.setItem('film_jobs', JSON.stringify(jobs.slice(0, 50)));
+    renderJobs();
+}
+
+function renderJobs() {
+    const jobs = getJobs();
+    const list = document.getElementById('jobList');
+    if (!jobs.length) { list.innerHTML = '<p style="color:#666;font-size:0.9em">暫無紀錄</p>'; return; }
+    list.innerHTML = '';
+    for (const j of jobs) {
+        const div = document.createElement('div');
+        div.className = 'job-item';
+        div.innerHTML = `
+            <div class="info">
+                <span class="badge ${j.mode}">${j.mode==='shorts'?'⚡Shorts':'🎬Cinema'}</span>
+                <span class="prompt-text">${j.prompt}</span>
+                <div class="meta">${j.created} • ${j.scenes||'?'} scenes</div>
+            </div>
+            <span class="badge ${j.status}">${j.status==='done'?'✅':j.status==='running'?'⏳':j.status==='error'?'❌':j.status}</span>
+        `;
+        if (j.status === 'done' && j.videoUrl) {
+            div.onclick = () => showResult(j.videoUrl);
+        }
+        list.appendChild(div);
+    }
+}
+
+// ============================================================
+// UI
+// ============================================================
+function selectMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-card').forEach(c => c.classList.toggle('active', c.dataset.mode === mode));
+    updateModeUI();
+}
+
+function updateModeUI() {
+    const m = MODES[currentMode];
+    const ss = document.getElementById('style');
+    ss.innerHTML = '';
+    for (const [k,v] of Object.entries(m.styles)) ss.innerHTML += `<option value="${k}">${v}</option>`;
+    
+    const ms = document.getElementById('model');
+    ms.innerHTML = '';
+    for (const [k,v] of Object.entries(m.models)) ms.innerHTML += `<option value="${k}">${v.label} (${v.cost===0?'免費':'$'+v.cost+'/5s'})</option>`;
+    
+    document.getElementById('scenes').value = currentMode === 'shorts' ? 6 : 12;
+    
+    // Presets
+    const pb = document.getElementById('presetBar');
+    pb.innerHTML = '';
+    for (const p of PRESETS[currentMode]) {
+        const b = document.createElement('span');
+        b.className = 'preset-btn';
+        b.textContent = p;
+        b.onclick = () => { document.getElementById('prompt').value = p; updateCost(); };
+        pb.appendChild(b);
+    }
+    updateCost();
+}
+
+function updateCost() {
+    const m = MODES[currentMode];
+    const modelKey = document.getElementById('model')?.value || 'ken-burns';
+    const scenes = parseInt(document.getElementById('scenes')?.value || 6);
+    const model = m.models[modelKey];
+    
+    let imgCost = scenes * 0.01; // Flux Dev ~$0.01
+    let animCost = 0;
+    const animScenes = Math.ceil(scenes * 0.3);
+    if (model && model.cost > 0) animCost = animScenes * model.cost;
+    let ttsCost = scenes * 0.01;
+    
+    const total = imgCost + animCost + ttsCost;
+    document.getElementById('costEst').innerHTML = `💰 預估成本: <strong>~$${total.toFixed(2)}</strong>（${scenes} 場景，${animScenes} 個動畫）`;
+}
+
+function showResult(url) {
+    document.getElementById('resultSection').classList.add('active');
+    document.getElementById('resultVideo').src = url;
+    document.getElementById('downloadLink').href = url;
+}
+
+function resetUI() {
+    document.getElementById('progressSection').classList.remove('active');
+    document.getElementById('resultSection').classList.remove('active');
+    document.getElementById('logContainer').innerHTML = '';
+    document.getElementById('btnGen').disabled = false;
+    document.getElementById('btnGen').textContent = '🚀 開始生成';
+    isRunning = false;
+}
+
+// ============================================================
+// MAIN PIPELINE (runs in browser)
+// ============================================================
+async function generate() {
+    const key = getKey();
+    if (!key) { alert('請先輸入 FAL Key！'); return; }
+    
+    const prompt = document.getElementById('prompt').value.trim();
+    if (!prompt) { alert('請輸入故事大綱'); return; }
+    
+    if (isRunning) return;
+    isRunning = true;
+    
+    const btn = document.getElementById('btnGen');
+    btn.disabled = true;
+    btn.textContent = '⏳ 生成中...';
+    
+    document.getElementById('progressSection').classList.add('active');
+    document.getElementById('resultSection').classList.remove('active');
+    document.getElementById('logContainer').innerHTML = '';
+    
+    const mode = currentMode;
+    const m = MODES[mode];
+    const settings = {
+        model: document.getElementById('model').value,
+        style: document.getElementById('style').value,
+        voice: document.getElementById('voice').value,
+        scenes: parseInt(document.getElementById('scenes').value),
+        tone: document.getElementById('tone').value,
+        animateScope: document.getElementById('animateScope').value,
+    };
+    
+    const jobId = Date.now().toString(36);
+    const job = {
+        id: jobId, mode, prompt: prompt.slice(0, 80),
+        status: 'running', scenes: settings.scenes,
+        created: new Date().toLocaleString(), videoUrl: null,
+    };
+    saveJob(job);
+    
+    try {
+        // ========== PHASE 1: SCRIPT ==========
+        log('📝 Phase 1: 生成劇本...', 'phase');
+        setProgress(5, '📝 生成劇本');
+        
+        const systemPrompt = mode === 'shorts'
+            ? `You are a viral YouTube Shorts scriptwriter. Write ${settings.scenes} scenes for a 60-second vertical video.
+Tone: ${settings.tone}
+Rules:
+- Hook in first 3 seconds
+- Each scene 3-8 seconds
+- Vertical 9:16 optimized descriptions
+- Narration in Chinese, description in English
+- About 30% scenes animate:true
+- Return ONLY JSON array: [{"scene_id":1,"description":"English visual","narration":"中文旁白","animate":true/false}]`
+            : `You are a Korean manhwa drama scriptwriter. Write ${settings.scenes} cinematic scenes.
+Tone: ${settings.tone}
+Rules:
+- Each scene needs: scene_id, description (English visual prompt), narration (Chinese), animate (true/false), motion (English camera/animation description)
+- About 30% scenes animate:true with subtle motion
+- Return ONLY JSON array`;
+        
+        const scriptResult = await falRun('fal-ai/any-llm', {
+            model: 'anthropic/claude-3.5-sonnet',
+            prompt: `${systemPrompt}\n\nStory: ${prompt}`,
+            max_tokens: 6000,
+        });
+        
+        const scriptText = scriptResult.output || scriptResult.response || scriptResult.text || '';
+        const jsonMatch = scriptText.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) throw new Error('LLM 冇返回有效 JSON');
+        
+        const scenes = JSON.parse(jsonMatch[0]);
+        scenes.forEach((s, i) => { s.scene_id = s.scene_id || i + 1; s.animate = !!s.animate; });
+        
+        log(`✅ 劇本完成: ${scenes.length} 場景`);
+        setProgress(15, '🎨 生成圖片');
+        
+        // ========== PHASE 2: IMAGES ==========
+        log('🎨 Phase 2: 生成場景圖片...', 'phase');
+        
+        const stylePrompt = STYLE_PROMPTS[settings.style] || '';
+        const imageUrls = [];
+        
+        for (let i = 0; i < scenes.length; i++) {
+            const pct = 15 + Math.round(35 * (i + 1) / scenes.length);
+            setProgress(pct, `🎨 圖片 ${i+1}/${scenes.length}`);
+            log(`🖼️ 場景 ${i+1}: 生成圖片...`);
+            
+            try {
+                const imgResult = await falRun('fal-ai/flux/dev', {
+                    prompt: `${stylePrompt}, ${scenes[i].description}, high quality, detailed, no text, no words`,
+                    image_size: {width: m.imgW, height: m.imgH},
+                    num_inference_steps: 25,
+                });
+                const url = imgResult.images[0].url;
+                imageUrls.push(url);
+                log(`  ✅ 場景 ${i+1} 完成`);
+            } catch(e) {
+                log(`  ⚠️ 場景 ${i+1} 失敗: ${e.message}`, 'error');
+            }
+        }
+        
+        if (!imageUrls.length) throw new Error('所有圖片都失敗');
+        log(`✅ ${imageUrls.length} 張圖片完成`);
+        setProgress(50, '🔊 生成配音');
+        
+        // ========== PHASE 3: TTS ==========
+        log('🔊 Phase 3: 生成 TTS 配音...', 'phase');
+        
+        const voiceId = VOICES[settings.voice]?.id || 'presenter_male';
+        const audioUrls = [];
+        const durations = [];
+        
+        for (let i = 0; i < scenes.length && i < imageUrls.length; i++) {
+            const pct = 50 + Math.round(20 * (i + 1) / scenes.length);
+            setProgress(pct, `🔊 TTS ${i+1}/${scenes.length}`);
+            
+            const text = (scenes[i].narration || '').trim();
+            if (!text) {
+                audioUrls.push(null);
+                durations.push(3);
+                continue;
+            }
+            
+            log(`🎙️ 場景 ${i+1}: TTS...`);
+            try {
+                const ttsResult = await falRun('fal-ai/minimax-tts/text-to-speech', {
+                    text: text,
+                    voice_setting: {voice_id: voiceId, speed: 1.0},
+                });
+                const audioUrl = ttsResult?.audio?.url || ttsResult?.audio_url;
+                if (audioUrl) {
+                    audioUrls.push(audioUrl);
+                    durations.push(0); // Will use audio duration
+                    log(`  ✅ 場景 ${i+1} TTS 完成`);
+                } else {
+                    audioUrls.push(null);
+                    durations.push(3);
+                }
+            } catch(e) {
+                log(`  ⚠️ TTS 失敗: ${e.message}`, 'error');
+                audioUrls.push(null);
+                durations.push(3);
+            }
+        }
+        
+        log(`✅ TTS 完成`);
+        setProgress(70, '🎬 動畫生成');
+        
+        // ========== PHASE 4: ANIMATION (optional) ==========
+        const videoUrls = new Array(imageUrls.length).fill(null);
+        const modelInfo = m.models[settings.model];
+        
+        if (modelInfo && modelInfo.falId && settings.animateScope !== 'none') {
+            log(`🎬 Phase 4: 動畫生成 (${settings.model})...`, 'phase');
+            
+            for (let i = 0; i < scenes.length && i < imageUrls.length; i++) {
+                const shouldAnimate = settings.animateScope === 'all' ||
+                    (settings.animateScope === 'ai' && scenes[i].animate);
+                if (!shouldAnimate) continue;
+                
+                const pct = 70 + Math.round(20 * (i + 1) / scenes.length);
+                setProgress(pct, `🎬 動畫 ${i+1}`);
+                log(`🎞️ 場景 ${i+1}: ${settings.model}...`);
+                
+                try {
+                    const motion = scenes[i].motion || 'gentle ambient motion, subtle breathing';
+                    const animArgs = {
+                        image_url: imageUrls[i],
+                        prompt: `${motion}, very subtle, mostly still, cinemagraph`,
+                    };
+                    
+                    const animResult = await falRun(modelInfo.falId, animArgs);
+                    const videoUrl = animResult?.video?.url || animResult?.video_url;
+                    if (videoUrl) {
+                        videoUrls[i] = videoUrl;
+                        log(`  ✅ 場景 ${i+1} 動畫完成`);
+                    }
+                } catch(e) {
+                    log(`  ⚠️ 動畫失敗: ${e.message}`, 'error');
+                }
+            }
+        } else {
+            log('⏭️ 跳過動畫（Ken Burns 靜態模式）');
+        }
+        
+        setProgress(92, '✂️ 合成影片');
+        log('✂️ Phase 5: 合成影片...', 'phase');
+        
+        // ========== PHASE 5: ASSEMBLY (client-side with canvas + MediaRecorder) ==========
+        scenes_global = scenes;
+        const finalVideoUrl = await assembleVideo(imageUrls, audioUrls, videoUrls, durations, m);
+        
+        setProgress(100, '🎉 完成！');
+        log('🎉 生成完成！');
+        
+        job.status = 'done';
+        job.videoUrl = finalVideoUrl;
+        saveJob(job);
+        
+        showResult(finalVideoUrl);
+        isRunning = false;
+        btn.disabled = false;
+        btn.textContent = '🚀 開始生成';
+        
+    } catch(e) {
+        log(`❌ 錯誤: ${e.message}`, 'error');
+        job.status = 'error';
+        saveJob(job);
+        isRunning = false;
+        btn.disabled = false;
+        btn.textContent = '🚀 開始生成';
+    }
+}
+
+// ============================================================
+// CLIENT-SIDE VIDEO ASSEMBLY (Canvas + MediaRecorder)
+// ============================================================
+async function assembleVideo(imageUrls, audioUrls, videoUrls, durations, m) {
+    const W = m.outW, H = m.outH, FPS = 24;
+    const sceneDuration = 4; // seconds per scene (approx)
+    const totalScenes = imageUrls.length;
+    
+    log(`  📐 解析度: ${W}x${H} | ${totalScenes} 場景 | ~${sceneDuration}s/場景`);
+    
+    // Load images
+    log('  📥 載入圖片...');
+    const images = [];
+    for (const url of imageUrls) {
+        try {
+            const img = await loadImage(url);
+            images.push(img);
+        } catch(e) {
+            // Create placeholder
+            const canvas = document.createElement('canvas');
+            canvas.width = W; canvas.height = H;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = '#667eea';
+            ctx.font = '40px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Scene', W/2, H/2);
+            images.push(canvas);
+        }
+    }
+    
+    // Try to load audio
+    log('  📥 載入音頻...');
+    const audioBuffers = [];
+    for (const url of audioUrls) {
+        if (!url) { audioBuffers.push(null); continue; }
+        try {
+            const resp = await fetch(url);
+            const buf = await resp.arrayBuffer();
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const decoded = await audioCtx.decodeAudioData(buf);
+            audioBuffers.push(decoded);
+            audioCtx.close();
+        } catch(e) {
+            audioBuffers.push(null);
+        }
+    }
+    
+    // Create video with Canvas + MediaRecorder
+    log('  🎬 渲染影片...');
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    
+    // Use MediaRecorder to capture canvas as video
+    const stream = canvas.captureStream(FPS);
+    
+    // Add audio tracks if available
+    const audioCtx = new AudioContext();
+    const dest = audioCtx.createMediaStreamDestination();
+    let hasAudio = false;
+    
+    const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm',
+        videoBitsPerSecond: 5000000,
+    });
+    
+    const chunks = [];
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    
+    return new Promise((resolve, reject) => {
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(chunks, {type: 'video/webm'});
+            const url = URL.createObjectURL(blob);
+            audioCtx.close();
+            log(`  ✅ 影片合成完成 (${(blob.size/1024/1024).toFixed(1)}MB)`);
+            resolve(url);
+        };
+        
+        mediaRecorder.start();
+        
+        let sceneIdx = 0;
+        let frameInScene = 0;
+        const framesPerScene = sceneDuration * FPS;
+        const totalFrames = totalScenes * framesPerScene;
+        let frame = 0;
+        
+        function renderFrame() {
+            if (frame >= totalFrames) {
+                mediaRecorder.stop();
+                return;
+            }
+            
+            const si = Math.floor(frame / framesPerScene);
+            const fInScene = frame % framesPerScene;
+            const progress = fInScene / framesPerScene;
+            
+            if (si < images.length) {
+                const img = images[si];
+                
+                // Ken Burns effect
+                const zoom = 1 + progress * 0.12;
+                const iw = img.width, ih = img.height;
+                const scale = Math.max(W / iw, H / ih) * zoom;
+                const sw = W / scale, sh = H / scale;
+                const sx = (iw - sw) / 2;
+                const sy = (ih - sh) / 2;
+                
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, W, H);
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+                
+                // Add subtle text overlay for narration
+                if (si < scenes_global.length) {
+                    const narr = scenes_global[si].narration || '';
+                    if (narr) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                        const textH = 50;
+                        ctx.fillRect(0, H - textH - 20, W, textH + 20);
+                        ctx.fillStyle = '#fff';
+                        ctx.font = 'bold 22px "PingFang TC", "Microsoft JhengHei", sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(narr.slice(0, 40), W/2, H - 35);
+                    }
+                }
+            }
+            
+            frame++;
+            if (frame % 10 === 0) {
+                const pct = 92 + Math.round(8 * frame / totalFrames);
+                setProgress(pct, `✂️ 渲染 ${Math.round(frame/totalFrames*100)}%`);
+            }
+            
+            requestAnimationFrame(renderFrame);
+        }
+        
+        renderFrame();
+    });
+}
+
+let scenes_global = [];
+
+function loadImage(url) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = url;
+    });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+    const key = getKey();
+    if (key) {
+        document.getElementById('falKey').value = key;
+        document.getElementById('keyStatus').textContent = '✅ 已儲存';
+        document.getElementById('keyStatus').className = 'status ok';
+    }
+    
+    // Voice options
+    const vs = document.getElementById('voice');
+    for (const [k,v] of Object.entries(VOICES)) {
+        vs.innerHTML += `<option value="${k}">${v.label}</option>`;
+    }
+    
+    updateModeUI();
+    renderJobs();
+    
+    // Cost update on change
+    ['model','scenes','animateScope'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', updateCost);
+    });
+});
+</script>
+</body>
+</html>
